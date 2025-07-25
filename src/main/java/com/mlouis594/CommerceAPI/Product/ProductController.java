@@ -1,9 +1,6 @@
 package com.mlouis594.CommerceAPI.Product;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
@@ -19,13 +16,31 @@ public class ProductController {
         this.productService = productService;
     }
 
-    @GetMapping("/")
-    public List<Product> getAllProducts(){
+    @GetMapping
+    public List<ProductResponse> getAllProducts(){
         return productService.getAllProducts();
     }
 
     @GetMapping("/{id}")
-    public Optional<Product> getProductById(@PathVariable UUID id){
+    public ProductResponse getProductById(@PathVariable("id") UUID id){
         return productService.getProductById(id);
     }
+
+    @DeleteMapping("/{id}")
+    public void deleteProductById(@PathVariable("id") UUID id){
+        productService.deleteProductById(id);
+    }
+
+    @PostMapping
+    public UUID saveProduct(@RequestBody NewProductRequest product){
+        return productService.saveProduct(product);
+    }
+
+    @PutMapping("/{id}")
+    public void updateProduct(@PathVariable("id") UUID id, @RequestBody UpdateProductRequest product){
+        productService.updateProduct(id, product);
+    }
+
+    //TODO: Add logic to update Product fields (name, description, imageURL, price, inventory) by ID
+    //Only update fields that are not null and have different value from current one
 }

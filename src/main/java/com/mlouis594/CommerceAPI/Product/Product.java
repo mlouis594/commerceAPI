@@ -33,6 +33,25 @@ public class Product {
     private Instant updatedAt;
     private Instant deletedAt;
 
+    public Product(){
+
+    }
+
+    public Product(
+            UUID id,
+            String name,
+            String description,
+            BigDecimal price,
+            Integer inventory,
+            String imageUrl) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.price = price;
+        this.inventory = inventory;
+        this.imageUrl = imageUrl;
+    }
+
     @PrePersist //when adding a new product this function will be called and values updated
     public void prePersist () {
         this.createdAt = Instant.now();
