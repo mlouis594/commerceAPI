@@ -3,7 +3,6 @@ package com.mlouis594.CommerceAPI.Product;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -40,7 +39,4 @@ public class ProductController {
     public void updateProduct(@PathVariable("id") UUID id, @RequestBody UpdateProductRequest product){
         productService.updateProduct(id, product);
     }
-
-    //TODO: Add logic to update Product fields (name, description, imageURL, price, inventory) by ID
-    //Only update fields that are not null and have different value from current one
 }
