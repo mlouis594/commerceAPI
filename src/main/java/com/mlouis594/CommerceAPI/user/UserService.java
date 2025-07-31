@@ -1,6 +1,10 @@
 package com.mlouis594.CommerceAPI.user;
 
 import com.mlouis594.CommerceAPI.exception.ResourceNotFound;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -9,12 +13,18 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
-public class UserService {
+public class UserService implements UserDetailsService {
 
-    private final UserRepository userRepository;
+    @Autowired
+    private UserRepository userRepository;
 
-    public UserService(UserRepository userRepository){
-        this.userRepository=userRepository;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException(
+                        "User [" + username + "] NOT FOUND"
+                ));
     }
 
     public List<UserDTO> getUsers(){
@@ -35,18 +45,14 @@ public class UserService {
     }
 
     public UUID saveUser(NewUserRequest userRequest){
-        UUID id = UUID.randomUUID();
         //TODO: Encode password before saving
-        userRepository.save(
-                new User(
-                        id,
-                        userRequest.userName(),
-                        userRequest.firstName(),
-                        userRequest.lastName(),
-                        userRequest.password()
-                )
-        );
-        return id;
+        User u = new User();
+        u.setUsername(userRequest.username());
+        u.setFirstName(userRequest.firstName());
+        u.setLastName(userRequest.lastName());
+        u.setPassword(userRequest.password());
+        userRepository.save(u);
+        return u.getId();
     }
 
     public void updateUser(UUID id, NewUserRequest user){
@@ -54,8 +60,8 @@ public class UserService {
                 "User with ID [" + id + "] NOT FOUND"
         ));
 
-        if(user.userName()!=null && user.userName().equals(u.getUserName())){
-            u.setUserName(user.userName());
+        if(user.username()!=null && user.username().equals(u.getUsername())){
+            u.setUsername(user.username());
         }
 
         if(user.firstName()!=null && user.firstName().equals(u.getFirstName())){
@@ -85,7 +91,7 @@ public class UserService {
     private static Function<User, UserDTO> mapToUserDTO() {
         return user -> new UserDTO(
                 user.getId(),
-                user.getUserName(),
+                user.getUsername(),
                 user.getFirstName(),
                 user.getLastName());
     }
