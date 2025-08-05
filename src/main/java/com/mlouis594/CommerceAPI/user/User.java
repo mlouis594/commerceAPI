@@ -1,6 +1,7 @@
 package com.mlouis594.CommerceAPI.user;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.ColumnDefault;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -30,9 +31,8 @@ public class User implements UserDetails {
     @Column(nullable = false, length=255)
     private String password;
 
-    @Column(nullable = false, length=54)
+    @Column(length = 50)
     private String role;
-
 
 
     public UUID getId() {
@@ -63,11 +63,6 @@ public class User implements UserDetails {
         this.lastName = lastName;
     }
 
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(role));
-    }
-
     public String getPassword() {
         return password;
     }
@@ -76,12 +71,13 @@ public class User implements UserDetails {
         this.password = password;
     }
 
-    public String getRole() {
-        return role;
-    }
+    public String getRole() {return role;}
 
-    public void setRole(String role) {
-        this.role = role;
+    public void setRole(String role) {this.role = role;}
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return List.of(new SimpleGrantedAuthority(role));
     }
 
     @Override

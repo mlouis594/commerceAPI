@@ -1,6 +1,7 @@
 package com.mlouis594.CommerceAPI.user;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,12 +19,17 @@ public class UserController {
         return userService.getUsers();
     }
 
-    @GetMapping("{id}")
+    @GetMapping("/id/{id}")
     public UserDTO getUserById(@PathVariable("id") UUID id){
         return userService.getUserById(id);
     }
 
-    @PostMapping
+    @GetMapping("/uname/{username}")
+    public UserDetails loadUserByUsername(@PathVariable("username") String username){
+        return userService.loadUserByUsername(username);
+    }
+
+    @PostMapping("signup")
     public UUID saveUser(@RequestBody NewUserRequest userRequest){
         return userService.saveUser(userRequest);
     }

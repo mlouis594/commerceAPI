@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,6 +18,7 @@ public class UserService implements UserDetailsService {
 
     @Autowired
     private UserRepository userRepository;
+    private PasswordEncoder passwordEncoder;
 
 
     @Override
@@ -50,7 +52,8 @@ public class UserService implements UserDetailsService {
         u.setUsername(userRequest.username());
         u.setFirstName(userRequest.firstName());
         u.setLastName(userRequest.lastName());
-        u.setPassword(userRequest.password());
+        u.setPassword(passwordEncoder.encode(userRequest.password()));
+        u.setRole("ROLE_USER");
         userRepository.save(u);
         return u.getId();
     }
@@ -60,20 +63,20 @@ public class UserService implements UserDetailsService {
                 "User with ID [" + id + "] NOT FOUND"
         ));
 
-        if(user.username()!=null && user.username().equals(u.getUsername())){
+        if(user.username()!=null && !user.username().equals(u.getUsername())){
             u.setUsername(user.username());
         }
 
-        if(user.firstName()!=null && user.firstName().equals(u.getFirstName())){
+        if(user.firstName()!=null && !user.firstName().equals(u.getFirstName())){
             u.setFirstName(user.firstName());
         }
 
-        if(user.lastName()!=null && user.lastName().equals(u.getLastName())){
+        if(user.lastName()!=null && !user.lastName().equals(u.getLastName())){
             u.setLastName(user.lastName());
         }
 
-        if(user.password()!=null && user.password().equals(u.getPassword())){
-            u.setPassword(user.password());
+        if(user.password()!=null && !passwordEncoder.encode(user.password()).equals(u.getPassword())){
+            u.setPassword(passwordEncoder.encode(user.password()));
         }
         userRepository.save(u);
     }
