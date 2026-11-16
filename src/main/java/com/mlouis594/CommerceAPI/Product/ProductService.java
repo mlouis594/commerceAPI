@@ -1,5 +1,6 @@
 package com.mlouis594.CommerceAPI.Product;
 
+import com.mlouis594.CommerceAPI.cart.CartItemRepository;
 import com.mlouis594.CommerceAPI.exception.ResourceNotFound;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,9 +12,11 @@ import java.util.UUID;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final CartItemRepository cartItemRepository;
 
-    public ProductService(ProductRepository productRepository) {
+    public ProductService(ProductRepository productRepository, CartItemRepository cartItemRepository) {
         this.productRepository = productRepository;
+        this.cartItemRepository = cartItemRepository;
     }
 
     public List<ProductResponse> getAllProducts() {
@@ -26,7 +29,10 @@ public class ProductService {
 
     @Transactional
     public void deleteProductById(UUID id) {
-        productRepository.delete(findProduct(id));
+        Product product = findProduct(id);
+        // Orders keep a snapshot of the product, so only carts reference it
+        cartItemRepository.deleteAllByProductId(id);
+        productRepository.delete(product);
     }
 
     @Transactional

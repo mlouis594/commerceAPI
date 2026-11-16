@@ -42,6 +42,9 @@ public class SecurityConfig {
                         // users manage themselves via /me; everything else is admin
                         .requestMatchers("/api/v1/users/me").authenticated()
                         .requestMatchers("/api/v1/users/**").hasRole("ADMIN")
+                        // order administration
+                        .requestMatchers(HttpMethod.GET, "/api/v1/orders/all").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/orders/*/status").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 // Unauthenticated requests get 401 instead of the default 403
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))

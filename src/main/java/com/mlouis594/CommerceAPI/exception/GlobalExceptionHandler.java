@@ -32,9 +32,19 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
     }
 
-    @ExceptionHandler(DuplicateResource.class)
-    public ProblemDetail handleDuplicate(DuplicateResource e) {
+    @ExceptionHandler(ResourceConflict.class)
+    public ProblemDetail handleConflict(ResourceConflict e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
+    }
+
+    @ExceptionHandler(InsufficientStock.class)
+    public ProblemDetail handleInsufficientStock(InsufficientStock e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
+    }
+
+    @ExceptionHandler(InvalidRequest.class)
+    public ProblemDetail handleInvalidRequest(InvalidRequest e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
