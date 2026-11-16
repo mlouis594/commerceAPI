@@ -47,7 +47,7 @@ public class UserService implements UserDetailsService {
         u.setFirstName(request.firstName());
         u.setLastName(request.lastName());
         u.setPassword(passwordEncoder.encode(request.password()));
-        u.setRole("ROLE_USER");
+        u.setRole(Role.USER);
         return userRepository.save(u).getId();
     }
 
@@ -68,8 +68,19 @@ public class UserService implements UserDetailsService {
     }
 
     @Transactional
+    public void changeRole(UUID id, Role role) {
+        findUser(id).setRole(role);
+    }
+
+    @Transactional
     public void deleteUser(UUID id) {
         userRepository.delete(findUser(id));
+    }
+
+    /** Resolves the authenticated principal to its persisted entity. */
+    public User findByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFound("User [" + username + "] NOT FOUND"));
     }
 
     private User findUser(UUID id) {
