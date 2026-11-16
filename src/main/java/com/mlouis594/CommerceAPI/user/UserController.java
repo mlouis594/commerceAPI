@@ -1,46 +1,76 @@
 package com.mlouis594.CommerceAPI.user;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.userdetails.UserDetails;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Self-service endpoints live under /me; everything addressed by id is
+ * admin-only (enforced in SecurityConfig).
+ */
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserController {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
 
-    @GetMapping
-    public List<UserDTO> getUsers(){
-        return userService.getUsers();
+    public UserController(UserService userService) {
+        this.userService = userService;
     }
 
-    @GetMapping("/id/{id}")
-    public UserDTO getUserById(@PathVariable("id") UUID id){
-        return userService.getUserById(id);
-    }
-
-    @GetMapping("/uname/{username}")
-    public UserDetails loadUserByUsername(@PathVariable("username") String username){
-        return userService.loadUserByUsername(username);
-    }
-
-    @PostMapping("signup")
-    public UUID saveUser(@RequestBody NewUserRequest userRequest){
+    @PostMapping("/signup")
+    @ResponseStatus(HttpStatus.CREATED)
+    public UUID signup(@Valid @RequestBody NewUserRequest userRequest) {
         return userService.saveUser(userRequest);
     }
 
-    @PutMapping("{id}")
-    public void updateUser(@PathVariable("id") UUID id, @RequestBody NewUserRequest userRequest){
-        userService.updateUser(id, userRequest);
+    // --- current user ---
+
+    @GetMapping("/me")
+    public UserDTO getMe(@AuthenticationPrincipal User me) {
+        return UserDTO.from(me);
     }
 
-    @DeleteMapping("{id}")
-    public void deleteUser(@PathVariable UUID id){
+    @PutMapping("/me")
+    public void updateMe(@AuthenticationPrincipal User me, @Valid @RequestBody UpdateUserRequest request) {
+        userService.updateUser(me.getId(), request);
+    }
+
+    @DeleteMapping("/me")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteMe(@AuthenticationPrincipal User me) {
+        userService.deleteUser(me.getId());
+    }
+
+    // --- admin ---
+
+    @GetMapping
+    public List<UserDTO> getUsers() {
+        return userService.getUsers();
+    }
+
+    @GetMapping("/{id}")
+    public UserDTO getUserById(@PathVariable UUID id) {
+        return userService.getUserById(id);
+    }
+
+    @PutMapping("/{id}")
+    public void updateUser(@PathVariable UUID id, @Valid @RequestBody UpdateUserRequest request) {
+        userService.updateUser(id, request);
+    }
+
+    @PutMapping("/{id}/role")
+    public void changeRole(@PathVariable UUID id, @Valid @RequestBody ChangeRoleRequest request) {
+        userService.changeRole(id, request.role());
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteUser(@PathVariable UUID id) {
         userService.deleteUser(id);
     }
 }

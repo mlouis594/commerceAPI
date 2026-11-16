@@ -1,96 +1,66 @@
 package com.mlouis594.CommerceAPI.Product;
 
+import com.mlouis594.CommerceAPI.cart.CartItemRepository;
 import com.mlouis594.CommerceAPI.exception.ResourceNotFound;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Service
 public class ProductService {
+
     private final ProductRepository productRepository;
+    private final CartItemRepository cartItemRepository;
 
-    public ProductService(ProductRepository productRepository) {
+    public ProductService(ProductRepository productRepository, CartItemRepository cartItemRepository) {
         this.productRepository = productRepository;
+        this.cartItemRepository = cartItemRepository;
     }
 
-    public List<ProductResponse> getAllProducts(){
-        return productRepository
-                .findAll()
-                .stream()
-                .map(mapToProductResponse())
-                .collect(Collectors.toList());
+    public List<ProductResponse> getAllProducts() {
+        return productRepository.findAll().stream().map(ProductResponse::from).toList();
     }
 
-    public ProductResponse getProductById(UUID id){
-        return productRepository
-                .findById(id).map(mapToProductResponse())
-                .orElseThrow( () -> new ResourceNotFound(
-                        "Product with ID [" + id + "] NOT FOUND"
-                ));
+    public ProductResponse getProductById(UUID id) {
+        return ProductResponse.from(findProduct(id));
     }
 
-    public void deleteProductById(UUID id){
-        boolean exists = productRepository.existsById(id);
-        if(!exists) throw new ResourceNotFound(
-                "Product with ID [" + id + "] NOT FOUND"
-        );
-
-        productRepository.deleteById(id);
+    @Transactional
+    public void deleteProductById(UUID id) {
+        Product product = findProduct(id);
+        // Orders keep a snapshot of the product, so only carts reference it
+        cartItemRepository.deleteAllByProductId(id);
+        productRepository.delete(product);
     }
 
-    public UUID saveProduct(NewProductRequest product){
-        UUID id = UUID.randomUUID();
-        productRepository.save(new Product(
-                id,
-                product.name(),
-                product.description(),
-                product.price(),
-                product.inventory(),
-                product.imageUrl()
-        ));
-        return id;
+    @Transactional
+    public UUID saveProduct(NewProductRequest request) {
+        // Let JPA generate the id; assigning one by hand turns save() into a failing merge
+        Product saved = productRepository.save(new Product(
+                request.name(),
+                request.description(),
+                request.price(),
+                request.inventory(),
+                request.imageUrl()));
+        return saved.getId();
     }
 
-    public void updateProduct(UUID id, UpdateProductRequest request){
+    @Transactional
+    public void updateProduct(UUID id, UpdateProductRequest request) {
+        Product p = findProduct(id);
 
-        Product p = productRepository.findById(id).orElseThrow(() -> new ResourceNotFound(
-                "Product with ID [" + id + "] NOT FOUND"
-        ));
-
-        if(request.name() != null && !request.name().equals(p.getName())) {
-            p.setName(request.name());
-        }
-        if(request.description() != null && !request.description().equals(p.getDescription())) {
-            p.setDescription(request.description());
-        }
-        if(request.price() != null && !request.price().equals(p.getPrice())) {
-            p.setPrice(request.price());
-        }
-        if(request.name() != null && !request.inventory().equals(p.getInventory())) {
-            p.setInventory(request.inventory());
-        }
-        if(request.imageUrl() != null && !request.imageUrl().equals(p.getImageUrl())) {
-            p.setImageUrl(request.imageUrl());
-        }
-
-        productRepository.save(p);
+        if (request.name() != null) p.setName(request.name());
+        if (request.description() != null) p.setDescription(request.description());
+        if (request.price() != null) p.setPrice(request.price());
+        if (request.inventory() != null) p.setInventory(request.inventory());
+        if (request.imageUrl() != null) p.setImageUrl(request.imageUrl());
+        // Changes are flushed by dirty checking when the transaction commits
     }
 
-    private static Function<Product, ProductResponse> mapToProductResponse() {
-        return p -> new ProductResponse(p.getId(),
-                p.getName(),
-                p.getDescription(),
-                p.getPrice(),
-                p.getInventory(),
-                p.getImageUrl(),
-                p.getCreatedAt(),
-                p.getUpdatedAt(),
-                p.getDeletedAt());
+    private Product findProduct(UUID id) {
+        return productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFound("Product with ID [" + id + "] NOT FOUND"));
     }
-
-
 }

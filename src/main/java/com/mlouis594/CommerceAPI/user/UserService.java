@@ -1,101 +1,105 @@
 package com.mlouis594.CommerceAPI.user;
 
+import com.mlouis594.CommerceAPI.cart.CartItemRepository;
+import com.mlouis594.CommerceAPI.exception.ResourceConflict;
 import com.mlouis594.CommerceAPI.exception.ResourceNotFound;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.mlouis594.CommerceAPI.order.OrderRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Service
 public class UserService implements UserDetailsService {
 
-    @Autowired
-    private UserRepository userRepository;
-    private PasswordEncoder passwordEncoder;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final CartItemRepository cartItemRepository;
+    private final OrderRepository orderRepository;
 
+    public UserService(UserRepository userRepository,
+                       PasswordEncoder passwordEncoder,
+                       CartItemRepository cartItemRepository,
+                       OrderRepository orderRepository) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.cartItemRepository = cartItemRepository;
+        this.orderRepository = orderRepository;
+    }
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException(
-                        "User [" + username + "] NOT FOUND"
-                ));
+                .orElseThrow(() -> new UsernameNotFoundException("User [" + username + "] NOT FOUND"));
     }
 
-    public List<UserDTO> getUsers(){
-        return userRepository
-                .findAll()
-                .stream()
-                .map(mapToUserDTO())
-                .collect(Collectors.toList());
+    public List<UserDTO> getUsers() {
+        return userRepository.findAll().stream().map(UserDTO::from).toList();
     }
 
-    public UserDTO getUserById(UUID id){
-        return userRepository
-                .findById(id)
-                .map(mapToUserDTO())
-                .orElseThrow(() ->new ResourceNotFound(
-                        "User with ID [" + id + "] NOT FOUND"
-                ));
+    public UserDTO getUserById(UUID id) {
+        return UserDTO.from(findUser(id));
     }
 
-    public UUID saveUser(NewUserRequest userRequest){
-        //TODO: Encode password before saving
+    @Transactional
+    public UUID saveUser(NewUserRequest request) {
+        if (userRepository.existsByUsername(request.username())) {
+            throw new ResourceConflict("Username [" + request.username() + "] is already taken");
+        }
         User u = new User();
-        u.setUsername(userRequest.username());
-        u.setFirstName(userRequest.firstName());
-        u.setLastName(userRequest.lastName());
-        u.setPassword(passwordEncoder.encode(userRequest.password()));
-        u.setRole("ROLE_USER");
-        userRepository.save(u);
-        return u.getId();
+        u.setUsername(request.username());
+        u.setFirstName(request.firstName());
+        u.setLastName(request.lastName());
+        u.setPassword(passwordEncoder.encode(request.password()));
+        u.setRole(Role.USER);
+        return userRepository.save(u).getId();
     }
 
-    public void updateUser(UUID id, NewUserRequest user){
-        User u = userRepository.findById(id).orElseThrow(() -> new ResourceNotFound(
-                "User with ID [" + id + "] NOT FOUND"
-        ));
+    @Transactional
+    public void updateUser(UUID id, UpdateUserRequest request) {
+        User u = findUser(id);
 
-        if(user.username()!=null && !user.username().equals(u.getUsername())){
-            u.setUsername(user.username());
+        if (request.firstName() != null) {
+            u.setFirstName(request.firstName());
         }
-
-        if(user.firstName()!=null && !user.firstName().equals(u.getFirstName())){
-            u.setFirstName(user.firstName());
+        if (request.lastName() != null) {
+            u.setLastName(request.lastName());
         }
-
-        if(user.lastName()!=null && !user.lastName().equals(u.getLastName())){
-            u.setLastName(user.lastName());
+        // BCrypt salts every hash, so compare with matches() rather than re-encoding
+        if (request.password() != null && !passwordEncoder.matches(request.password(), u.getPassword())) {
+            u.setPassword(passwordEncoder.encode(request.password()));
         }
-
-        if(user.password()!=null && !passwordEncoder.encode(user.password()).equals(u.getPassword())){
-            u.setPassword(passwordEncoder.encode(user.password()));
-        }
-        userRepository.save(u);
     }
 
-    public void deleteUser(UUID id){
-        boolean exists = userRepository.existsById(id);
-
-        if(!exists) throw new ResourceNotFound(
-                "User with ID [" + id + "] NOT FOUND"
-        );
-
-        userRepository.deleteById(id);
+    @Transactional
+    public void changeRole(UUID id, Role role) {
+        findUser(id).setRole(role);
     }
 
-    private static Function<User, UserDTO> mapToUserDTO() {
-        return user -> new UserDTO(
-                user.getId(),
-                user.getUsername(),
-                user.getFirstName(),
-                user.getLastName());
+    @Transactional
+    public void deleteUser(UUID id) {
+        User user = findUser(id);
+        // Keep order history intact rather than silently deleting financial records
+        if (orderRepository.existsByUserId(id)) {
+            throw new ResourceConflict("User with ID [" + id + "] has order history and cannot be deleted");
+        }
+        cartItemRepository.deleteAllByUserId(id);
+        userRepository.delete(user);
+    }
+
+    /** Resolves the authenticated principal to its persisted entity. */
+    public User findByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFound("User [" + username + "] NOT FOUND"));
+    }
+
+    private User findUser(UUID id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFound("User with ID [" + id + "] NOT FOUND"));
     }
 }
