@@ -1,5 +1,6 @@
 package com.mlouis594.CommerceAPI.Product;
 
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,12 +29,12 @@ public class ProductController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public UUID saveProduct(@RequestBody NewProductRequest product) {
+    public UUID saveProduct(@Valid @RequestBody NewProductRequest product) {
         return productService.saveProduct(product);
     }
 
     @PutMapping("/{id}")
-    public void updateProduct(@PathVariable UUID id, @RequestBody UpdateProductRequest product) {
+    public void updateProduct(@PathVariable UUID id, @Valid @RequestBody UpdateProductRequest product) {
         productService.updateProduct(id, product);
     }
 

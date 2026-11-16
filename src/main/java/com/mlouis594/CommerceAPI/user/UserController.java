@@ -1,5 +1,6 @@
 package com.mlouis594.CommerceAPI.user;
 
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,12 +29,12 @@ public class UserController {
 
     @PostMapping("/signup")
     @ResponseStatus(HttpStatus.CREATED)
-    public UUID saveUser(@RequestBody NewUserRequest userRequest) {
+    public UUID saveUser(@Valid @RequestBody NewUserRequest userRequest) {
         return userService.saveUser(userRequest);
     }
 
     @PutMapping("/{id}")
-    public void updateUser(@PathVariable UUID id, @RequestBody NewUserRequest userRequest) {
+    public void updateUser(@PathVariable UUID id, @Valid @RequestBody UpdateUserRequest userRequest) {
         userService.updateUser(id, userRequest);
     }
 

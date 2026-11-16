@@ -52,15 +52,9 @@ public class UserService implements UserDetailsService {
     }
 
     @Transactional
-    public void updateUser(UUID id, NewUserRequest request) {
+    public void updateUser(UUID id, UpdateUserRequest request) {
         User u = findUser(id);
 
-        if (request.username() != null && !request.username().equals(u.getUsername())) {
-            if (userRepository.existsByUsername(request.username())) {
-                throw new DuplicateResource("Username [" + request.username() + "] is already taken");
-            }
-            u.setUsername(request.username());
-        }
         if (request.firstName() != null) {
             u.setFirstName(request.firstName());
         }
