@@ -31,20 +31,17 @@ public class Product {
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
     private Instant updatedAt;
-    private Instant deletedAt;
 
     public Product(){
 
     }
 
     public Product(
-            UUID id,
             String name,
             String description,
             BigDecimal price,
             Integer inventory,
             String imageUrl) {
-        this.id = id;
         this.name = name;
         this.description = description;
         this.price = price;
@@ -95,11 +92,11 @@ public class Product {
         this.price = price;
     }
 
-    public int getInventory() {
+    public Integer getInventory() {
         return inventory;
     }
 
-    public void setInventory(int inventory) {
+    public void setInventory(Integer inventory) {
         this.inventory = inventory;
     }
 
@@ -127,23 +124,16 @@ public class Product {
         this.updatedAt = updatedAt;
     }
 
-    public Instant getDeletedAt() {
-        return deletedAt;
-    }
-
-    public void setDeletedAt(Instant deletedAt) {
-        this.deletedAt = deletedAt;
-    }
-
+    // Entity identity is the database id
     @Override
     public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
-        Product product = (Product) o;
-        return inventory == product.inventory && Objects.equals(id, product.id) && Objects.equals(name, product.name) && Objects.equals(description, product.description) && Objects.equals(price, product.price) && Objects.equals(imageUrl, product.imageUrl) && Objects.equals(createdAt, product.createdAt) && Objects.equals(updatedAt, product.updatedAt) && Objects.equals(deletedAt, product.deletedAt);
+        if (this == o) return true;
+        if (!(o instanceof Product product)) return false;
+        return id != null && id.equals(product.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, name, description, price, inventory, imageUrl, createdAt, updatedAt, deletedAt);
+        return Objects.hashCode(id);
     }
 }

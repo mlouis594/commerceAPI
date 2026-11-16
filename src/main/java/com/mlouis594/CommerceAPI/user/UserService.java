@@ -1,101 +1,85 @@
 package com.mlouis594.CommerceAPI.user;
 
+import com.mlouis594.CommerceAPI.exception.DuplicateResource;
 import com.mlouis594.CommerceAPI.exception.ResourceNotFound;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Service
 public class UserService implements UserDetailsService {
 
-    @Autowired
-    private UserRepository userRepository;
-    private PasswordEncoder passwordEncoder;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException(
-                        "User [" + username + "] NOT FOUND"
-                ));
+                .orElseThrow(() -> new UsernameNotFoundException("User [" + username + "] NOT FOUND"));
     }
 
-    public List<UserDTO> getUsers(){
-        return userRepository
-                .findAll()
-                .stream()
-                .map(mapToUserDTO())
-                .collect(Collectors.toList());
+    public List<UserDTO> getUsers() {
+        return userRepository.findAll().stream().map(UserDTO::from).toList();
     }
 
-    public UserDTO getUserById(UUID id){
-        return userRepository
-                .findById(id)
-                .map(mapToUserDTO())
-                .orElseThrow(() ->new ResourceNotFound(
-                        "User with ID [" + id + "] NOT FOUND"
-                ));
+    public UserDTO getUserById(UUID id) {
+        return UserDTO.from(findUser(id));
     }
 
-    public UUID saveUser(NewUserRequest userRequest){
-        //TODO: Encode password before saving
+    @Transactional
+    public UUID saveUser(NewUserRequest request) {
+        if (userRepository.existsByUsername(request.username())) {
+            throw new DuplicateResource("Username [" + request.username() + "] is already taken");
+        }
         User u = new User();
-        u.setUsername(userRequest.username());
-        u.setFirstName(userRequest.firstName());
-        u.setLastName(userRequest.lastName());
-        u.setPassword(passwordEncoder.encode(userRequest.password()));
+        u.setUsername(request.username());
+        u.setFirstName(request.firstName());
+        u.setLastName(request.lastName());
+        u.setPassword(passwordEncoder.encode(request.password()));
         u.setRole("ROLE_USER");
-        userRepository.save(u);
-        return u.getId();
+        return userRepository.save(u).getId();
     }
 
-    public void updateUser(UUID id, NewUserRequest user){
-        User u = userRepository.findById(id).orElseThrow(() -> new ResourceNotFound(
-                "User with ID [" + id + "] NOT FOUND"
-        ));
+    @Transactional
+    public void updateUser(UUID id, NewUserRequest request) {
+        User u = findUser(id);
 
-        if(user.username()!=null && !user.username().equals(u.getUsername())){
-            u.setUsername(user.username());
+        if (request.username() != null && !request.username().equals(u.getUsername())) {
+            if (userRepository.existsByUsername(request.username())) {
+                throw new DuplicateResource("Username [" + request.username() + "] is already taken");
+            }
+            u.setUsername(request.username());
         }
-
-        if(user.firstName()!=null && !user.firstName().equals(u.getFirstName())){
-            u.setFirstName(user.firstName());
+        if (request.firstName() != null) {
+            u.setFirstName(request.firstName());
         }
-
-        if(user.lastName()!=null && !user.lastName().equals(u.getLastName())){
-            u.setLastName(user.lastName());
+        if (request.lastName() != null) {
+            u.setLastName(request.lastName());
         }
-
-        if(user.password()!=null && !passwordEncoder.encode(user.password()).equals(u.getPassword())){
-            u.setPassword(passwordEncoder.encode(user.password()));
+        // BCrypt salts every hash, so compare with matches() rather than re-encoding
+        if (request.password() != null && !passwordEncoder.matches(request.password(), u.getPassword())) {
+            u.setPassword(passwordEncoder.encode(request.password()));
         }
-        userRepository.save(u);
     }
 
-    public void deleteUser(UUID id){
-        boolean exists = userRepository.existsById(id);
-
-        if(!exists) throw new ResourceNotFound(
-                "User with ID [" + id + "] NOT FOUND"
-        );
-
-        userRepository.deleteById(id);
+    @Transactional
+    public void deleteUser(UUID id) {
+        userRepository.delete(findUser(id));
     }
 
-    private static Function<User, UserDTO> mapToUserDTO() {
-        return user -> new UserDTO(
-                user.getId(),
-                user.getUsername(),
-                user.getFirstName(),
-                user.getLastName());
+    private User findUser(UUID id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFound("User with ID [" + id + "] NOT FOUND"));
     }
 }

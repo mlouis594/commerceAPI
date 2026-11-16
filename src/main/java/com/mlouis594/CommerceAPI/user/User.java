@@ -1,7 +1,6 @@
 package com.mlouis594.CommerceAPI.user;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.ColumnDefault;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -19,26 +18,26 @@ public class User implements UserDetails {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false, length=50)
+    @Column(nullable = false, unique = true, length = 50)
     private String username;
 
-    @Column(nullable = false, length=51)
+    @Column(nullable = false, length = 50)
     private String firstName;
 
-    @Column(nullable = false, length=52)
+    @Column(nullable = false, length = 50)
     private String lastName;
 
-    @Column(nullable = false, length=255)
+    @Column(nullable = false)
     private String password;
 
-    @Column(length = 50)
+    @Column(nullable = false, length = 50)
     private String role;
-
 
     public UUID getId() {
         return id;
     }
 
+    @Override
     public String getUsername() {
         return username;
     }
@@ -63,6 +62,7 @@ public class User implements UserDetails {
         this.lastName = lastName;
     }
 
+    @Override
     public String getPassword() {
         return password;
     }
@@ -71,24 +71,29 @@ public class User implements UserDetails {
         this.password = password;
     }
 
-    public String getRole() {return role;}
+    public String getRole() {
+        return role;
+    }
 
-    public void setRole(String role) {this.role = role;}
+    public void setRole(String role) {
+        this.role = role;
+    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority(role));
     }
 
+    // Entity identity is the database id
     @Override
     public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
-        User user = (User) o;
-        return Objects.equals(id, user.id) && Objects.equals(username, user.username) && Objects.equals(firstName, user.firstName) && Objects.equals(lastName, user.lastName) && Objects.equals(password, user.password);
+        if (this == o) return true;
+        if (!(o instanceof User user)) return false;
+        return id != null && id.equals(user.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, username, firstName, lastName, password);
+        return Objects.hashCode(id);
     }
 }

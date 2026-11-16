@@ -1,5 +1,6 @@
 package com.mlouis594.CommerceAPI.Product;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,27 +17,29 @@ public class ProductController {
     }
 
     @GetMapping
-    public List<ProductResponse> getAllProducts(){
+    public List<ProductResponse> getAllProducts() {
         return productService.getAllProducts();
     }
 
     @GetMapping("/{id}")
-    public ProductResponse getProductById(@PathVariable("id") UUID id){
+    public ProductResponse getProductById(@PathVariable UUID id) {
         return productService.getProductById(id);
     }
 
-    @DeleteMapping("/{id}")
-    public void deleteProductById(@PathVariable("id") UUID id){
-        productService.deleteProductById(id);
-    }
-
     @PostMapping
-    public UUID saveProduct(@RequestBody NewProductRequest product){
+    @ResponseStatus(HttpStatus.CREATED)
+    public UUID saveProduct(@RequestBody NewProductRequest product) {
         return productService.saveProduct(product);
     }
 
     @PutMapping("/{id}")
-    public void updateProduct(@PathVariable("id") UUID id, @RequestBody UpdateProductRequest product){
+    public void updateProduct(@PathVariable UUID id, @RequestBody UpdateProductRequest product) {
         productService.updateProduct(id, product);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteProductById(@PathVariable UUID id) {
+        productService.deleteProductById(id);
     }
 }
